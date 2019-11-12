@@ -9,3 +9,5 @@ simulator:$(OBJS)
 .PHONY: clean
 clean:
 	rm -f simulator *.o *~
+test:
+	./test.sh
