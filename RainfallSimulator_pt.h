@@ -1,12 +1,13 @@
-#ifndef __RAINFALLSIMULATOR_H__
-#define __RAINFALLSIMULATOR_H__
+#ifndef __RAINFALLSIMULATOR_PT_H__
+#define __RAINFALLSIMULATOR_PT_H__
 #include "Point.h"
 #include <iostream>
 #include <math.h>
 #include <vector>
 
-class RainfallSimulator {
+class RainfallSimulator_pt {
 protected:
+  int num_thread;
   int size;
   int raindropInterval;
   int absorptionRate;
@@ -21,8 +22,9 @@ protected:
                       int j);
 
 public:
-  RainfallSimulator(const std::vector<std::vector<int>> &elevations,
-                    const int &N, const int &M, const float &A);
+  RainfallSimulator_pt(const std::vector<std::vector<int>> &elevations,
+                       const int &P, const int &N, const int &M,
+                       const float &A);
   void runOneTimestamp();
   bool isComplete();
   void printOperationTime();

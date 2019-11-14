@@ -11,7 +11,7 @@ Point::Point(const float absorptionrate,
 void Point::rainfall() { currentDrops += raindropRate; }
 
 void Point::absorb() {
-  float absorbingDrops = fmin(absorptionRate, currentDrops);
+  float absorbingDrops = std::min(absorptionRate, currentDrops);
   absorbedDrops += absorbingDrops;
   currentDrops -= absorbingDrops;
 }
@@ -21,11 +21,10 @@ void Point::trickleAway(std::vector<std::vector<float>> &delta) {
   if (numberOfLowerPoints == 0 || currentDrops == 0) {
     return;
   }
-
+  float totaltrickleAwayRaindropSize = std::min(trickleAwayRate, currentDrops);
   float trickleAwayRaindropSize =
-      fmin(trickleAwayRate, currentDrops) / numberOfLowerPoints;
-  currentDrops -= trickleAwayRaindropSize * numberOfLowerPoints;
-
+      totaltrickleAwayRaindropSize / numberOfLowerPoints;
+  currentDrops -= totaltrickleAwayRaindropSize;
   for (auto pointIndexes : lowerPoints) {
     int i = pointIndexes.first;
     int j = pointIndexes.second;

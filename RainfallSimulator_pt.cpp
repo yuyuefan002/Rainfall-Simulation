@@ -1,9 +1,9 @@
-#include "RainfallSimulator.h"
+#include "RainfallSimulator_pt.h"
 
-void RainfallSimulator::check(std::vector<std::pair<int, int>> &lowestNeighbor,
-                              int &min_elevation, const int &current_elevation,
-                              const int &i, const int &j,
-                              const std::vector<std::vector<int>> &elevations) {
+void RainfallSimulator_pt::check(
+    std::vector<std::pair<int, int>> &lowestNeighbor, int &min_elevation,
+    const int &current_elevation, const int &i, const int &j,
+    const std::vector<std::vector<int>> &elevations) {
   if (i >= size || i < 0)
     return;
   if (j >= size || j < 0)
@@ -17,7 +17,7 @@ void RainfallSimulator::check(std::vector<std::pair<int, int>> &lowestNeighbor,
     lowestNeighbor.push_back(std::make_pair(i, j));
   }
 }
-std::vector<std::pair<int, int>> RainfallSimulator::checkLowestNeighbor(
+std::vector<std::pair<int, int>> RainfallSimulator_pt::checkLowestNeighbor(
     const std::vector<std::vector<int>> &elevations, int i, int j) {
   std::vector<std::pair<int, int>> lowestNeighbor;
   int min_elevation = elevations[i][j];
@@ -28,11 +28,11 @@ std::vector<std::pair<int, int>> RainfallSimulator::checkLowestNeighbor(
   return lowestNeighbor;
 }
 
-RainfallSimulator::RainfallSimulator(
-    const std::vector<std::vector<int>> &elevations, const int &N, const int &M,
-    const float &A)
-    : size(N), raindropInterval(M), absorptionRate(A), operationTime(0),
-      complete(false) {
+RainfallSimulator_pt::RainfallSimulator_pt(
+    const std::vector<std::vector<int>> &elevations, const int &P, const int &N,
+    const int &M, const float &A)
+    : num_thread(P), size(N), raindropInterval(M), absorptionRate(A),
+      operationTime(0), complete(false) {
   for (int i = 0; i < size; ++i) {
     landscape.push_back(std::vector<Point>());
     for (int j = 0; j < size; ++j) {
@@ -43,7 +43,7 @@ RainfallSimulator::RainfallSimulator(
   }
 }
 
-void RainfallSimulator::runOneTimestamp() {
+void RainfallSimulator_pt::runOneTimestamp() {
   std::vector<std::vector<float>> delta(size, std::vector<float>(size, 0));
   ++operationTime;
 
@@ -79,14 +79,14 @@ void RainfallSimulator::runOneTimestamp() {
   }
 }
 
-bool RainfallSimulator::isComplete() { return complete; }
+bool RainfallSimulator_pt::isComplete() { return complete; }
 
-void RainfallSimulator::printOperationTime() {
+void RainfallSimulator_pt::printOperationTime() {
   fprintf(stdout, "Rainfall simulation took %d time steps to complete.\n",
           operationTime);
 }
 
-void RainfallSimulator::printAbsorbedRainDrops() {
+void RainfallSimulator_pt::printAbsorbedRainDrops() {
   for (auto points : landscape) {
     for (auto point : points) {
       std::cout.width(8);
@@ -96,7 +96,7 @@ void RainfallSimulator::printAbsorbedRainDrops() {
   }
 }
 
-void RainfallSimulator::printCurrentRainDrops() {
+void RainfallSimulator_pt::printCurrentRainDrops() {
   for (auto points : landscape) {
     for (auto point : points) {
       std::cout.width(8);

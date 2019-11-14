@@ -1,13 +1,21 @@
 CC=g++
-CFLAGS=-std=gnu++11 -pedantic -ggdb3
+CFLAGS=-std=gnu++11 -pedantic -ggdb3 -O3 -pg -pthread
 SRCS=$(wildcard *.cpp)
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
-simulator:$(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS)
+PT_OBJS=$(filter-out rainfall_seq.o, $(OBJS))
+SEQ_OBJS=$(filter-out rainfall_pt.o, $(OBJS))
+BIN=rainfall_pt rainfall_seq
+all: $(BIN)
+
+rainfall_pt:$(PT_OBJS)
+	$(CC) $(CFLAGS) -o $@ $(PT_OBJS) 
+
+rainfall_seq:$(SEQ_OBJS)
+	$(CC) $(CFLAGS) -o $@ $(SEQ_OBJS)
 %.o:%.cpp
 	$(CC) $(CFLAGS) -c $<
 .PHONY: clean
 clean:
-	rm -f simulator *.o *~
+	rm -f $(BIN) *.o *~
 test:
 	./test.sh

@@ -1,6 +1,7 @@
 #! /bin/bash
 make -j > /dev/null
 
+echo -e "\e[34;46mchecking sequential version...\e[m"
 echo -e "\e[34;46mrunning unit test...\e[m"
 cd unit_test/
 
@@ -15,4 +16,3 @@ cd function_test/
 
 cd ../
 
-make clean > /dev/null
