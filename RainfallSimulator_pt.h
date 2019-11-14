@@ -20,6 +20,7 @@ protected:
   std::vector<std::pair<int, int>>
   checkLowestNeighbor(const std::vector<std::vector<int>> &elevations, int i,
                       int j);
+  void absorbAndricklyAway_pt(std::vector<std::vector<float>> &delta);
 
 public:
   RainfallSimulator_pt(const std::vector<std::vector<int>> &elevations,
@@ -30,6 +31,14 @@ public:
   void printOperationTime();
   void printAbsorbedRainDrops();
   void printCurrentRainDrops();
+};
+
+struct subLandscape {
+  std::vector<std::vector<Point>> *landscape;
+  int start;
+  int end;
+  int size;
+  std::vector<std::vector<float>> *delta;
 };
 
 #endif

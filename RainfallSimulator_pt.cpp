@@ -42,6 +42,59 @@ RainfallSimulator_pt::RainfallSimulator_pt(
     }
   }
 }
+void *absorbAndTrickleAway(void *arg) {
+  struct subLandscape *subLandscape = (struct subLandscape *)arg;
+  int start = subLandscape->start;
+  int end = subLandscape->end;
+  int size = subLandscape->size;
+  std::vector<std::vector<Point>> &landscape = *subLandscape->landscape;
+  std::vector<std::vector<float>> &delta = *subLandscape->delta;
+  for (int i = start; i < end; ++i) {
+    for (int j = 0; j < size; ++j) {
+      (landscape)[i][j].absorb();
+      (landscape)[i][j].trickleAway(delta);
+    }
+  }
+  delete subLandscape;
+  pthread_exit(NULL);
+}
+
+void RainfallSimulator_pt::absorbAndricklyAway_pt(
+    std::vector<std::vector<float>> &delta) {
+  pthread_t *thrds = new pthread_t[num_thread];
+  int span = size / num_thread;
+
+  std::vector<std::vector<float>> **TLS_delta =
+      new std::vector<std::vector<float>> *[num_thread];
+
+  for (int i = 0; i < num_thread; ++i) {
+    struct subLandscape *arg = new struct subLandscape;
+    arg->landscape = &landscape;
+    arg->start = i * span;
+    arg->end = arg->start + span;
+    arg->size = size;
+    TLS_delta[i] =
+        new std::vector<std::vector<float>>(size, std::vector<float>(size, 0));
+    arg->delta = TLS_delta[i];
+    pthread_create(&thrds[i], NULL, &absorbAndTrickleAway, (void *)arg);
+  }
+
+  for (int i = 0; i < num_thread; ++i) {
+    pthread_join(thrds[i], NULL);
+  }
+  for (int i = 0; i < size; ++i) {
+    for (int j = 0; j < size; ++j) {
+      for (int k = 0; k < num_thread; ++k) {
+        delta[i][j] += (*TLS_delta[k])[i][j];
+      }
+    }
+  }
+  for (int i = 0; i < num_thread; i++) {
+    delete TLS_delta[i];
+  }
+  delete[] TLS_delta;
+  delete[] thrds;
+}
 
 void RainfallSimulator_pt::runOneTimestamp() {
   std::vector<std::vector<float>> delta(size, std::vector<float>(size, 0));
@@ -57,12 +110,7 @@ void RainfallSimulator_pt::runOneTimestamp() {
       }
     }
   } else {
-    for (int i = 0; i < size; ++i) {
-      for (int j = 0; j < size; ++j) {
-        landscape[i][j].absorb();
-        landscape[i][j].trickleAway(delta);
-      }
-    }
+    absorbAndricklyAway_pt(delta);
   }
 
   int count = 0;

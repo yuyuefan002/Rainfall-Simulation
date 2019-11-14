@@ -18,6 +18,8 @@ int main(int argc, char **argv) {
 
   int P = atoi(argv[1]), M = atoi(argv[2]), N = atoi(argv[4]);
   float A = atof(argv[3]);
+  if (P > N)
+    P = N;
   std::string filename = argv[5];
 
   std::vector<std::vector<int>> elevations(N, std::vector<int>(N));

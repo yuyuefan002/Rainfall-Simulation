@@ -16,6 +16,6 @@ rainfall_seq:$(SEQ_OBJS)
 	$(CC) $(CFLAGS) -c $<
 .PHONY: clean
 clean:
-	rm -f $(BIN) *.o *~
+	rm -f $(BIN) *.o *~ gmon.out result analysis.txt
 test:
 	./test.sh

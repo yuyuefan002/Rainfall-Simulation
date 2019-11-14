@@ -1,0 +1,6 @@
+fmin runs a long time, should use std::min instead.
+
+when input size < 128, absrob and trickaway run longest time
+when input size >=128, for loops in runOneTimestamp run longest time.
+
+Therefore, it is a good choice to parallel for loops for absorb() and trickaway().
