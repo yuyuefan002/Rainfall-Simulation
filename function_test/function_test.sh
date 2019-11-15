@@ -7,7 +7,7 @@ num_thread=$2
 length_rain=10
 absorb_rate=0.25
 size=4
-echo -e "\e[44mrunning ./simulator [P] $length_rain $absorb_rate $size sample_${size}x$size\e[m"
+echo -e "\e[44mrunning ./$function [P] $length_rain $absorb_rate $size sample_${size}x$size\e[m"
 ./$function $num_thread $length_rain $absorb_rate $size sample_$size\x$size.in > my_$size\x$size.out;
 head -n 2  my_$size\x$size.out
 ./check.py $size sample_$size\x$size.out my_$size\x$size.out

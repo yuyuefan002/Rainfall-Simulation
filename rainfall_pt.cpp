@@ -1,5 +1,4 @@
 #include "RainfallSimulator_pt.h"
-#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <pthread.h>
@@ -26,17 +25,18 @@ int main(int argc, char **argv) {
   readElevations(elevations, filename);
 
   RainfallSimulator_pt rainfallSimulator(elevations, P, N, M, A);
-  auto start = std::chrono::high_resolution_clock::now();
-  while (!rainfallSimulator.isComplete()) {
-    rainfallSimulator.runOneTimestamp();
-  }
-  auto end = std::chrono::high_resolution_clock::now();
-  auto duration =
-      std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
-  rainfallSimulator.printOperationTime();
-  std::cout << "Runtime = " << duration.count() / 1e6 << " seconds\n";
-  rainfallSimulator.printAbsorbedRainDrops();
+  std::vector<std::vector<pthread_mutex_t>> mutex(
+      N, std::vector<pthread_mutex_t>(N));
+
+  pthread_barrier_t barrier;
+  pthread_barrier_init(&barrier, NULL, P);
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < N; j++) {
+      pthread_mutex_init(&mutex[i][j], NULL);
+    }
+  }
+  rainfallSimulator.runWholeProcess(mutex, barrier);
 }
 
 void readElevations(std::vector<std::vector<int>> &elevations,

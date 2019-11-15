@@ -4,3 +4,8 @@ when input size < 128, absrob and trickaway run longest time
 when input size >=128, for loops in runOneTimestamp run longest time.
 
 Therefore, it is a good choice to parallel for loops for absorb() and trickaway().
+
+overhead is too big, so, this method doesn't work.
+
+because only trickleaway method has the race condition of delta matrix.
+Therefore, we can parallel the whole process, only lock for the race condition and apply barrier.
