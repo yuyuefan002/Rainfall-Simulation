@@ -9,3 +9,6 @@ overhead is too big, so, this method doesn't work.
 
 because only trickleaway method has the race condition of delta matrix.
 Therefore, we can parallel the whole process, only lock for the race condition and apply barrier.
+
+vector seems much slower than plain array. Reading the same vector from multi threads itself will slows down the reading operation. 
+I don't understand why.
