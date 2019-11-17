@@ -1,47 +1,42 @@
 #include "Point_pt.h"
-#include <iostream>
-Point_pt::Point_pt(const float absorptionrate,
-                   const std::vector<std::pair<int, int>> &points)
-    : absorptionRate(absorptionrate), raindropRate(1), trickleAwayRate(1),
-      currentDrops(0), absorbedDrops(0) {
-  for (auto point : points) {
-    lowerPoints.push_back(std::make_pair(point.first, point.second));
-  }
-}
-void Point_pt::rainfall() { currentDrops += raindropRate; }
+
+bool Point_pt::notrickle() { return trickleAmount == 0; }
+
+void Point_pt::trickleIn(float &amount) { currentDrops += amount; }
 
 void Point_pt::absorb() {
-  float absorbingDrops = std::min(absorptionRate, currentDrops);
-  absorbedDrops += absorbingDrops;
-  currentDrops -= absorbingDrops;
-}
-
-void Point_pt::trickleAway(
-    std::vector<std::vector<float>> &delta,
-    std::vector<std::vector<pthread_mutex_t>> &delta_locks) {
-  int numberOfLowerPoint_pts = lowerPoints.size();
-  if (numberOfLowerPoint_pts == 0 || currentDrops == 0) {
+  if (currentDrops <= 0) {
     return;
   }
-  float totaltrickleAwayRaindropSize = std::min(trickleAwayRate, currentDrops);
-  float trickleAwayRaindropSize =
-      totaltrickleAwayRaindropSize / numberOfLowerPoint_pts;
-  currentDrops -= totaltrickleAwayRaindropSize;
-  for (auto pointIndexes : lowerPoints) {
-    int i = pointIndexes.first;
-    int j = pointIndexes.second;
-    pthread_mutex_lock(&delta_locks[i][j]);
-    delta[i][j] += trickleAwayRaindropSize;
-    pthread_mutex_unlock(&delta_locks[i][j]);
+  float absorbingDrops = std::min(absorptionRate, currentDrops);
+  currentDrops -= absorbingDrops;
+  absorbedDrops += absorbingDrops;
+}
+void Point_pt::setAbsorptionRate(const float &absorptionrate) {
+  absorptionRate = absorptionrate;
+}
+
+void Point_pt::trickleAway() {
+  if (!willTrickle || currentDrops <= 0) {
+    trickleAmount = 0;
+    return;
   }
+  float totaltrickleAwayDropSize = std::min(trickleAwayRate, currentDrops);
+  trickleAmount = totaltrickleAwayDropSize;
+  currentDrops -= totaltrickleAwayDropSize;
 }
 
-void Point_pt::trickleIn(const float trickleAwayRaindropSize) {
-  currentDrops += trickleAwayRaindropSize;
+int Point_pt::absorbAll() {
+  if (currentDrops <= 0) {
+    return 0;
+  }
+  float absorbingDrops = currentDrops;
+  currentDrops = 0;
+  absorbedDrops += absorbingDrops;
+  return absorbingDrops / absorptionRate;
 }
-
-bool Point_pt::isClean() { return currentDrops == 0; }
 
 float Point_pt::reportAbsorbedDrops() { return absorbedDrops; }
+void Point_pt::setWillTrickle(bool willtrickle) { willTrickle = willtrickle; }
 
-float Point_pt::reportCurrentDrops() { return currentDrops; }
+bool Point_pt::willTrickle_() { return willTrickle; }

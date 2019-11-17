@@ -9,3 +9,9 @@ overhead is too big, so, this method doesn't work.
 
 because only trickleaway method has the race condition of delta matrix.
 Therefore, we can parallel the whole process, only lock for the race condition and apply barrier.
+
+vector will slow down parallel processes.
+
+Abstractions will slow down parallel processes, even parameters are passed by references.
+
+the -pg flag will largely slows down parallel. Maybe this is the key reason.
