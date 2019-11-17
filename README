@@ -12,6 +12,7 @@ Therefore, we can parallel the whole process, only lock for the race condition a
 
 
 
+
 vector will slow down parallel processes.
 
 Abstractions will slow down parallel processes, even parameters are passed by references.
@@ -20,4 +21,3 @@ the -pg flag will largely slows down parallel. Maybe this is the key reason.
 
 vector seems much slower than plain array. Reading the same vector from multi threads itself will slows down the reading operation. 
 I don't understand why.
-

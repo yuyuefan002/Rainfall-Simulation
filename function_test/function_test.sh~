@@ -49,7 +49,7 @@ echo -e "\e[44mrunning ./$function $num_thread $length_rain $absorb_rate $size s
 head -n 2  my_$size\x$size.out
 ./check.py $size sample_$size\x$size.out my_$size\x$size.out
 
-if [ "$arg_num" -ne 3 ];then
+if [ "$arg_num" -ne 4 ];then
     exit 0
 fi
 

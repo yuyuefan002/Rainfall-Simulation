@@ -1,12 +1,9 @@
 #include "RainfallSimulator_pt.h"
-bool notrickle = false;
-int operationTime = 0;
-pthread_barrier_t barrier;
 
-void check(std::vector<std::pair<int, int>> &lowestNeighbor, int &min_elevation,
-           const int &current_elevation, const int &i, const int &j,
-           const std::vector<std::vector<int>> &elevations) {
-  int size = elevations.size();
+void RainfallSimulator_pt::check(
+    std::vector<std::pair<int, int>> &lowestNeighbor, int &min_elevation,
+    const int &current_elevation, const int &i, const int &j,
+    const std::vector<std::vector<int>> &elevations) {
   if (i >= size || i < 0)
     return;
   if (j >= size || j < 0)
@@ -14,16 +11,14 @@ void check(std::vector<std::pair<int, int>> &lowestNeighbor, int &min_elevation,
   if (elevations[i][j] < min_elevation) {
     min_elevation = elevations[i][j];
     lowestNeighbor.clear();
-    lowestNeighbor.push_back(std::make_pair(i + 1, j + 1));
+    lowestNeighbor.push_back(std::make_pair(i, j));
   } else if (elevations[i][j] == min_elevation &&
              elevations[i][j] != current_elevation) {
-    lowestNeighbor.push_back(std::make_pair(i + 1, j + 1));
+    lowestNeighbor.push_back(std::make_pair(i, j));
   }
 }
-
-std::vector<std::pair<int, int>>
-checkLowestNeighbor(const std::vector<std::vector<int>> &elevations, int i,
-                    int j) {
+std::vector<std::pair<int, int>> RainfallSimulator_pt::checkLowestNeighbor(
+    const std::vector<std::vector<int>> &elevations, int i, int j) {
   std::vector<std::pair<int, int>> lowestNeighbor;
   int min_elevation = elevations[i][j];
   check(lowestNeighbor, min_elevation, elevations[i][j], i - 1, j, elevations);
@@ -32,172 +27,166 @@ checkLowestNeighbor(const std::vector<std::vector<int>> &elevations, int i,
   check(lowestNeighbor, min_elevation, elevations[i][j], i + 1, j, elevations);
   return lowestNeighbor;
 }
-void updateEachPoint(Landscape<Point_pt> &landscape, int i, int j,
-                     const std::vector<std::pair<int, int>> &lowerPoints) {
-  if (lowerPoints.size() == 0) {
-    landscape[i][j].setWillTrickle(false);
-    return;
-  }
-  landscape[i][j].setWillTrickle(true);
-  landscape[i][j].trickleNumber = lowerPoints.size();
-  for (auto lowerpoint : lowerPoints) {
-    int lower_i = lowerpoint.first;
-    int lower_j = lowerpoint.second;
-    if (lower_i == i - 1 && lower_j == j) {
-      landscape[i][j].topTrickle = true;
-    } else if (lower_i == i + 1 && lower_j == j) {
-      landscape[i][j].bottomTrickle = true;
-    } else if (lower_i == i && lower_j == j - 1) {
-      landscape[i][j].leftTrickle = true;
-    } else if (lower_i == i && lower_j == j + 1) {
-      landscape[i][j].rightTrickle = true;
-    }
-  }
-}
-void initLandscape(Landscape<Point_pt> &landscape, const int &size,
-                   std::vector<std::vector<int>> &elevations,
-                   const float &absorptionRate) {
-  for (int i = 1; i < size + 1; ++i) {
-    for (int j = 1; j < size + 1; ++j) {
+
+RainfallSimulator_pt::RainfallSimulator_pt(
+    const std::vector<std::vector<int>> &elevations, const int &P, const int &N,
+    const int &M, const float &A)
+    : num_thread(P), size(N), raindropInterval(M), absorptionRate(A),
+      operationTime(0), complete(false) {
+  for (int i = 0; i < size; ++i) {
+    landscape.push_back(std::vector<Point_pt>());
+    for (int j = 0; j < size; ++j) {
       std::vector<std::pair<int, int>> lowerPoints =
-          checkLowestNeighbor(elevations, i - 1, j - 1);
-      updateEachPoint(landscape, i, j, lowerPoints);
-      landscape[i][j].setAbsorptionRate(absorptionRate);
+          checkLowestNeighbor(elevations, i, j);
+      landscape[i].push_back(Point_pt(A, lowerPoints));
     }
   }
 }
-
-bool noTrickle(Landscape<Point_pt> &landscape, const int &N) {
-  for (int i = 1; i < N + 1; ++i) {
-    for (int j = 1; j < N + 1; ++j) {
-      if (!landscape[i][j].notrickle()) {
-        return false;
+void normal_rainAndAbosrbAndTirckleAway(
+    int &raindropInterval, int &start, int &end, int &size,
+    std::vector<std::vector<Point_pt>> &landscape,
+    std::vector<std::vector<float>> &delta,
+    std::vector<std::vector<pthread_mutex_t>> *delta_locks) {
+  if (raindropInterval != 0) {
+    --raindropInterval;
+    for (int i = start; i < end; ++i) {
+      for (int j = 0; j < size; ++j) {
+        landscape[i][j].rainfall();
+        landscape[i][j].absorb();
+        landscape[i][j].trickleAway(delta, *delta_locks);
       }
     }
-  }
-
-  int maxAbsorptionTime = 0;
-  for (int i = 1; i < N + 1; ++i) {
-    for (int j = 1; j < N + 1; ++j) {
-      maxAbsorptionTime =
-          std::max(maxAbsorptionTime, landscape[i][j].absorbAll());
-    }
-  }
-
-  operationTime += maxAbsorptionTime;
-  return true;
-}
-
-void rainAndAbsorbAndTrickleAway(Landscape<Point_pt> &landscape,
-                                 const int &operationTime, const int &size,
-                                 const int &raindropInterval, const int &start,
-                                 const int &end) {
-  for (int i = start; i < end; i++) {
-    for (int j = 1; j < size + 1; j++) {
-      if (operationTime < raindropInterval) {
-        float rainDropRate = 1;
-        landscape[i][j].trickleIn(rainDropRate);
-      }
-      landscape[i][j].absorb();
-      landscape[i][j].trickleAway();
-    }
-  }
-}
-void trickleIn(Landscape<Point_pt> &landscape, pthread_mutex_t *&mutex_array,
-               const int &size, const int &start, const int &end) {
-  int first_row = start;
-  int second_row = start + 1;
-  int last_row = end - 1;
-  int second_last_row = end - 2;
-  for (int i = start; i < end; i++) {
-    for (int j = 1; j < size + 1; j++) {
-      if (!landscape[i][j].willTrickle_()) {
-        continue;
-      }
-      float trickleAwayRaindropSize =
-          (landscape[i][j].trickleAmount / landscape[i][j].trickleNumber);
-      if (landscape[i][j].topTrickle) {
-        if (i == first_row || i == second_row) {
-          pthread_mutex_lock(&mutex_array[i - 1]);
-          landscape[i - 1][j].trickleIn(trickleAwayRaindropSize);
-          pthread_mutex_unlock(&mutex_array[i - 1]);
-        } else {
-          landscape[i - 1][j].trickleIn(trickleAwayRaindropSize);
-        }
-      }
-      if (landscape[i][j].bottomTrickle) {
-        if (i == last_row || i == second_last_row) {
-          pthread_mutex_lock(&mutex_array[i + 1]);
-          landscape[i + 1][j].trickleIn(trickleAwayRaindropSize);
-          pthread_mutex_unlock(&mutex_array[i + 1]);
-        } else {
-          landscape[i + 1][j].trickleIn(trickleAwayRaindropSize);
-        }
-      }
-      if (landscape[i][j].leftTrickle) {
-        if (i == first_row || i == last_row) {
-          pthread_mutex_lock(&mutex_array[i]);
-          landscape[i][j - 1].trickleIn(trickleAwayRaindropSize);
-          pthread_mutex_unlock(&mutex_array[i]);
-        } else {
-          landscape[i][j - 1].trickleIn(trickleAwayRaindropSize);
-        }
-      }
-      if (landscape[i][j].rightTrickle) {
-        if (i == first_row || i == last_row) {
-          pthread_mutex_lock(&mutex_array[i]);
-          landscape[i][j + 1].trickleIn(trickleAwayRaindropSize);
-          pthread_mutex_unlock(&mutex_array[i]);
-        } else {
-          landscape[i][j + 1].trickleIn(trickleAwayRaindropSize);
-        }
+  } else {
+    for (int i = start; i < end; ++i) {
+      for (int j = 0; j < size; ++j) {
+        landscape[i][j].absorb();
+        landscape[i][j].trickleAway(delta, *delta_locks);
       }
     }
   }
 }
-
-void *rainfall(void *arg) {
-  struct thread_info info = *((struct thread_info *)arg);
-  int size = info.size;
-  int thread_id = info.thread_id;
-  int num_thread = info.num_thread;
-  int raindropInterval = info.raindropInterval;
-  pthread_mutex_t *mutex_array = info.mutex_array;
-  Landscape<Point_pt> &landscape = *info.landscape;
-
-  int granularity = size / num_thread;
-  int start = thread_id * granularity + 1;
-  int end = start + granularity;
-
-  while (!notrickle) {
-    rainAndAbsorbAndTrickleAway(landscape, operationTime, size,
-                                raindropInterval, start, end);
-    pthread_barrier_wait(&barrier);
-
-    trickleIn(landscape, mutex_array, size, start, end);
-
-    if (thread_id == 0) {
-      operationTime++;
-      notrickle = noTrickle(landscape, size);
+int normalTrickleIn(const int &start, const int &end, const int &size,
+                    std::vector<std::vector<Point_pt>> &landscape,
+                    std::vector<std::vector<float>> &delta) {
+  int count = 0;
+  for (int i = start; i < end; ++i) {
+    for (int j = 0; j < size; ++j) {
+      landscape[i][j].trickleIn(delta[i][j]);
+      delta[i][j] = 0;
+      if (landscape[i][j].isClean())
+        ++count;
     }
-
-    pthread_barrier_wait(&barrier);
   }
-
+  return count;
+}
+int countAllPoints(const int &size,
+                   std::vector<std::vector<Point_pt>> &landscape) {
+  int count = 0;
+  for (int i = 0; i < size; ++i) {
+    for (int j = 0; j < size; ++j) {
+      if (landscape[i][j].isClean()) {
+        count++;
+      }
+    }
+  }
+  return count;
+}
+void *runOneTimestamp(void *arg) {
+  struct thread_info *info = (struct thread_info *)arg;
+  int &start = info->start;
+  int &end = info->end;
+  int &size = info->size;
+  int &raindropInterval = info->raindropInterval;
+  pthread_barrier_t *barrier = info->barrier;
+  std::vector<std::vector<float>> &delta = *info->delta;
+  std::vector<std::vector<Point_pt>> &landscape = *info->landscape;
+  std::vector<std::vector<pthread_mutex_t>> *delta_locks = info->delta_locks;
+  int num_row = end - start;
+  int *operationTime = new int;
+  *operationTime = 0;
+  bool waitingForOtherThreads = false;
+  while (true) {
+    ++*operationTime;
+    normal_rainAndAbosrbAndTirckleAway(raindropInterval, start, end, size,
+                                       landscape, delta, delta_locks);
+    pthread_barrier_wait(barrier);
+    if (waitingForOtherThreads) {
+      int count;
+      count = countAllPoints(size, landscape);
+      pthread_barrier_wait(barrier);
+      if (count == size * size) {
+        break;
+      }
+    } else {
+      int count;
+      count = normalTrickleIn(start, end, size, landscape, delta);
+      pthread_barrier_wait(barrier);
+      if (count == num_row * size) {
+        waitingForOtherThreads = true;
+        count = countAllPoints(size, landscape);
+        if (count == size * size) {
+          break;
+        }
+      }
+    }
+  }
   delete (struct thread_info *)arg;
-  pthread_exit(NULL);
+  pthread_exit(operationTime);
 }
 
-void printResult(float duration, const Landscape<Point_pt> &landscape,
-                 const int &size) {
-  fprintf(stdout, "Rainfall simulation took %d time steps to complete.\n",
-          operationTime);
-  std::cout << "Runtime = " << duration / 1e6 << " seconds\n";
+void RainfallSimulator_pt::runWholeProcess(
+    std::vector<std::vector<pthread_mutex_t>> &mutex,
+    pthread_barrier_t &barrier) {
+  pthread_t *thrds = new pthread_t[num_thread];
+  std::vector<std::vector<float>> delta(size, std::vector<float>(size, 0));
+  int span = size / num_thread;
+  auto start = std::chrono::high_resolution_clock::now();
+  for (int i = 0; i < num_thread; ++i) {
+    struct thread_info *info = new struct thread_info;
+    info->start = i * span;
+    info->end = info->start + span;
+    info->size = size;
+    info->raindropInterval = raindropInterval;
+    info->delta = &delta;
+    info->landscape = &landscape;
+    info->barrier = &barrier;
+    info->delta_locks = &mutex;
+    pthread_create(&thrds[i], NULL, &runOneTimestamp, (void *)info);
+  }
 
-  for (int i = 1; i < size + 1; ++i) {
-    for (int j = 1; j < size + 1; ++j) {
+  int max_operationTime = 0;
+  for (int i = 0; i < num_thread; ++i) {
+    void *operationTime = NULL;
+    pthread_join(thrds[i], &operationTime);
+    max_operationTime = std::max(*(int *)operationTime, max_operationTime);
+    delete (int *)operationTime;
+  }
+    auto end = std::chrono::high_resolution_clock::now();
+  delete[] thrds;
+  fprintf(stdout, "Rainfall simulation took %d time steps to complete.\n",
+          max_operationTime);
+  auto duration =
+      std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+  std::cout << "Runtime = " << duration.count() / 1e6 << " seconds\n";
+  printAbsorbedRainDrops();
+}
+
+void RainfallSimulator_pt::printAbsorbedRainDrops() {
+  for (auto points : landscape) {
+    for (auto point : points) {
       std::cout.width(8);
-      std::cout << landscape[i][j].reportAbsorbedDrops();
+      std::cout << point.reportAbsorbedDrops();
+    }
+    std::cout << std::endl;
+  }
+}
+
+void RainfallSimulator_pt::printCurrentRainDrops() {
+  for (auto points : landscape) {
+    for (auto point : points) {
+      std::cout.width(8);
+      std::cout << point.reportCurrentDrops();
     }
     std::cout << std::endl;
   }

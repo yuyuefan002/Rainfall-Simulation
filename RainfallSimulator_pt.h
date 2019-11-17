@@ -2,39 +2,44 @@
 #define __RAINFALLSIMULATOR_PT_H__
 #include "Point_pt.h"
 #include <chrono>
+#include <iostream>
+#include <math.h>
+#include <pthread.h>
 #include <vector>
-
-template <typename T> class Landscape {
-private:
-  T *landscape;
+class RainfallSimulator_pt {
+protected:
+  int num_thread;
   int size;
+  int raindropInterval;
+  int absorptionRate;
+  int operationTime;
+  bool complete;
+  std::vector<std::vector<Point_pt>> landscape;
+  void check(std::vector<std::pair<int, int>> &lowestNeighbor,
+             int &min_elevation, const int &current_elevation, const int &i,
+             const int &j, const std::vector<std::vector<int>> &elevations);
+  std::vector<std::pair<int, int>>
+  checkLowestNeighbor(const std::vector<std::vector<int>> &elevations, int i,
+                      int j);
 
 public:
-  explicit Landscape(int n) {
-    size = n;
-    landscape = new T[n * n];
-  }
-
-  ~Landscape() { delete[] landscape; }
-
-  T *operator[](int x) { return (landscape + x * size); }
-
-  T *operator[](int x) const { return (landscape + x * size); }
+  RainfallSimulator_pt(const std::vector<std::vector<int>> &elevations,
+                       const int &P, const int &N, const int &M,
+                       const float &A);
+  void printAbsorbedRainDrops();
+  void printCurrentRainDrops();
+  void runWholeProcess(std::vector<std::vector<pthread_mutex_t>> &mutex,
+                       pthread_barrier_t &barrier);
 };
 
 struct thread_info {
-  int num_thread;
-  int raindropInterval;
+  int start;
+  int end;
   int size;
-  Landscape<Point_pt> *landscape;
-  pthread_mutex_t *mutex_array;
-  int thread_id;
+  int raindropInterval;
+  std::vector<std::vector<float>> *delta;
+  std::vector<std::vector<Point_pt>> *landscape;
+  pthread_barrier_t *barrier;
+  std::vector<std::vector<pthread_mutex_t>> *delta_locks;
 };
-
-void *rainfall(void *arg);
-void printResult(float duration, const Landscape<Point_pt> &landscape,
-                 const int &size);
-void initLandscape(Landscape<Point_pt> &landscape, const int &size,
-                   std::vector<std::vector<int>> &elevations,
-                   const float &absorptionRate);
 #endif

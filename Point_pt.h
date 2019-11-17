@@ -1,34 +1,30 @@
 #ifndef __POINT_PT_H__
 #define __POINT_PT_H__
+#include <math.h>
+#include <utility>
+#include <vector>
 
-#include <algorithm>
-#include <climits>
-#include <iostream>
 class Point_pt {
-private:
+protected:
   float absorptionRate;
+  float raindropRate;
   float trickleAwayRate;
   float currentDrops;
   float absorbedDrops;
-  bool willTrickle;
+  std::vector<std::pair<int, int>> lowerPoints;
 
 public:
-  float trickleAmount;
-  int trickleNumber;
-  bool topTrickle;
-  bool bottomTrickle;
-  bool leftTrickle;
-  bool rightTrickle;
-  void setWillTrickle(bool willtrickle);
-  bool willTrickle_();
-  bool notrickle();
+  Point_pt();
+  Point_pt(const float absorptionrate,
+           const std::vector<std::pair<int, int>> &points);
+  void rainfall();
   void absorb();
-  void trickleIn(float &amount);
-  void trickleAway();
-  int absorbAll();
-  Point_pt() : trickleAwayRate(1) {}
-  void setAbsorptionRate(const float &abosorptionRate);
+  void trickleIn(const float trickleAwayRaindropSize);
+  void trickleAway(std::vector<std::vector<float>> &delta,
+                   std::vector<std::vector<pthread_mutex_t>> &delta_locks);
+  bool isClean();
   float reportAbsorbedDrops();
+  float reportCurrentDrops();
 };
 
 #endif
